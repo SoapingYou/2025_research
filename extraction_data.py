@@ -7,6 +7,8 @@ class extract_data:
         self.raw_text = ''
         self.binary_ov_arr = []
         self.raw_table = []
+        self.all_data = pd.DataFrame({})
+        self.data = pd.DataFrame({})
         
     def extract(self, debug):
         f = open(self.file_name)
@@ -17,7 +19,9 @@ class extract_data:
         self.get_raw_table(debug)
         
         self.all_data = pd.DataFrame(self.raw_table, index=self.df_index)
-        self.filter(debug)
+        
+        self.filter(debug) #this determines self.data 
+        self.clean_up_index(debug) #this determines self.cleaned_up_data
         
     def get_binary_ov_arr(self, debug):
         title_ind = 0
@@ -80,12 +84,15 @@ class extract_data:
             print("no of mirnas: " + str(len(self.raw_table)))
         # i only want ov cancer i do not want any other cancers
     def filter(self,debug):
-        bool_series = pd.Series([False if i == -1 else True for i in self.binary_ov_arr], index= self.df_index)
-        self.data = self.all_data.loc[bool_series, :]
-    '''
-    future todo:
-    1. extract function: get table and also if it's pos/neg
-    2. get the other datasets, and scourge if you can find more
-    3. code the REO extractor by how they did it
-    
-    '''
+        self.bool_series = pd.Series([False if i == -1 else True for i in self.binary_ov_arr], index= self.df_index)
+        self.data = self.all_data.loc[self.bool_series, :]
+
+    def clean_up_index(self, debug):
+        new_index = {}
+        for i in set(self.data.index):
+            if("ovarian cancer" in i.lower()): # this excludes ovarian borderline and ov others bc <50 samples
+                new_index[i] = 1
+            elif('non-cancer' in i.lower() or 'benign ovarian disease' in i.lower()):
+                new_index[i]=0
+        new_data = self.data.rename(index = new_index)
+        return new_data
